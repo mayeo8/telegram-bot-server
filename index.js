@@ -10,8 +10,8 @@ admin.initializeApp({
 });
 const db = admin.firestore();
 
-const BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'; // Replace with your token
-const CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID';     // Replace with your Telegram chat ID
+const BOT_TOKEN = '8022649727:AAF68rSMpakClEdGc-QSonTuu33t4TijhlE';
+const CHAT_ID = '5298733898';
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 // /telegram endpoint for webhook
