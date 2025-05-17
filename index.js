@@ -15,6 +15,7 @@ try {
   }
 
   const serviceAccount = JSON.parse(serviceAccountJson);
+  console.log('Service account email:', serviceAccount.client_email);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
@@ -166,6 +167,5 @@ app.listen(PORT, () => {
   console.log(`Webhook endpoint: https://telegram-bot-server-spvo.onrender.com`);
   console.log(`Health check: https://telegram-bot-server-spvo.onrender.com/health`);
   console.log(`Setup webhook: https://telegram-bot-server-spvo.onrender.com/setup-webhook?url=https://telegram-bot-server-spvo.onrender.com`);
-  console.log('Service account email:', serviceAccount.client_email);
 
 });
