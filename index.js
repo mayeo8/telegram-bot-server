@@ -6,12 +6,19 @@ const app = express();
 // Middleware
 app.use(express.json());
 
-// Initialize Firebase from environment variable
+// Initialize Firebase using FIREBASE_SERVICE_ACCOUNT_JSON
 try {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+  if (!serviceAccountJson) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable not set');
+  }
+
+  const serviceAccount = JSON.parse(serviceAccountJson);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
+
   console.log('Firebase initialized successfully');
 } catch (error) {
   console.error('Error initializing Firebase:', error.message);
@@ -29,17 +36,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Debug endpoint
-app.all('/debug', (req, res) => {
-  console.log('DEBUG ENDPOINT CALLED');
-  console.log('Method:', req.method);
-  console.log('Headers:', JSON.stringify(req.headers));
-  console.log('Body:', JSON.stringify(req.body));
-  console.log('Query:', JSON.stringify(req.query));
-  res.send('Debug info logged');
-});
-
-// Webhook endpoint
+// Webhook endpoint for Telegram
 app.post('/telegram', async (req, res) => {
   try {
     console.log('Received webhook:', JSON.stringify(req.body));
@@ -55,9 +52,8 @@ app.post('/telegram', async (req, res) => {
     }
 
     if (String(sender) !== String(CHAT_ID)) {
-      console.warn(`Unauthorized access attempt. Received sender: ${sender}, Expected CHAT_ID: ${CHAT_ID}`);
-      // Uncomment the next line to block unauthorized access
-      // return res.status(401).send('Unauthorized');
+      console.warn(`Unauthorized access attempt from ${sender}`);
+      return res.status(401).send('Unauthorized');
     }
 
     // Handle /emails command
@@ -118,7 +114,7 @@ app.post('/telegram', async (req, res) => {
   }
 });
 
-// Helper to send error messages to Telegram
+// Helper function to send error messages to Telegram
 async function sendErrorMessage(errorText) {
   try {
     await axios.post(`${TELEGRAM_API}/sendMessage`, {
@@ -130,12 +126,12 @@ async function sendErrorMessage(errorText) {
   }
 }
 
-// Health check
+// Route to check if server is running
 app.get('/health', (req, res) => {
   res.status(200).send('Server is running');
 });
 
-// Set webhook
+// Set up webhook with Telegram
 app.get('/setup-webhook', async (req, res) => {
   try {
     const WEBHOOK_URL = req.query.url;
@@ -143,6 +139,7 @@ app.get('/setup-webhook', async (req, res) => {
       return res.status(400).send('Please provide a webhook URL as a query parameter');
     }
 
+    console.log(`Setting up webhook to: ${WEBHOOK_URL}/telegram`);
     const response = await axios.post(`${TELEGRAM_API}/setWebhook`, {
       url: `${WEBHOOK_URL}/telegram`,
     });
@@ -155,7 +152,7 @@ app.get('/setup-webhook', async (req, res) => {
   }
 });
 
-// Webhook info
+// Get current webhook info
 app.get('/webhook-info', async (req, res) => {
   try {
     const response = await axios.get(`${TELEGRAM_API}/getWebhookInfo`);
@@ -166,18 +163,10 @@ app.get('/webhook-info', async (req, res) => {
   }
 });
 
-// Echo for debugging
-app.post('/echo', (req, res) => {
-  console.log('ECHO ENDPOINT CALLED');
-  console.log('Request body:', JSON.stringify(req.body));
-
-  res.json({
-    message: 'Echo endpoint received your request',
-    receivedBody: req.body
-  });
-});
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Webhook endpoint: https://telegram-bot-server-spvo.onrender.com`);
+  console.log(`Health check: https://telegram-bot-server-spvo.onrender.com/health`);
+  console.log(`Setup webhook: https://telegram-bot-server-spvo.onrender.com/setup-webhook?url=https://telegram-bot-server-spvo.onrender.com`);
 });
