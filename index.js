@@ -19,8 +19,8 @@ try {
 }
 
 const db = admin.firestore();
-const BOT_TOKEN = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-const CHAT_ID = 'xxxxxxxxxxxxxxxxx';
+const BOT_TOKEN = '8022649727:AAF68rSMpakClEdGc-QSonTuu33t4TijhlE';
+const CHAT_ID = '5298733898';
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 // Logging middleware
@@ -159,7 +159,7 @@ app.get('/webhook-info', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Webhook endpoint: https://your-domain.com/telegram`);
-  console.log(`Health check: https://your-domain.com/health`);
-  console.log(`Setup webhook: https://your-domain.com/setup-webhook?url=https://your-domain.com`);
+  console.log(`Webhook endpoint: https://telegram-bot-server-spvo.onrender.com/telegram`);
+  console.log(`Health check: https://telegram-bot-server-spvo.onrender.com/health`);
+  console.log(`Setup webhook: https://telegram-bot-server-spvo.onrender.com/setup-webhook?url=https://telegram-bot-server-spvo.onrender.com`);
 });
