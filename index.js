@@ -37,81 +37,78 @@ app.use((req, res, next) => {
 });
 
 // Webhook endpoint for Telegram
-app.post('/telegram', async (req, res) => {
-  try {
-    console.log('Received webhook:', JSON.stringify(req.body));
+app.post('/telegram', (req, res) => {
+  // Immediately respond 200 to Telegram to stop retries
+  res.sendStatus(200);
 
-    const msg = req.body?.message?.text;
-    const sender = req.body?.message?.chat?.id;
+  // Then process the message asynchronously without blocking Telegram
+  (async () => {
+    try {
+      console.log('Received webhook:', JSON.stringify(req.body));
 
-    console.log(`Message: ${msg}, Sender: ${sender}`);
+      const msg = req.body?.message?.text;
+      const sender = req.body?.message?.chat?.id;
 
-    if (!sender) {
-      console.error('No sender ID found in request');
-      return res.status(400).send('Bad request: No sender ID');
-    }
+      console.log(`Message: ${msg}, Sender: ${sender}`);
 
-    if (String(sender) !== String(CHAT_ID)) {
-      console.warn(`Unauthorized access attempt from ${sender}`);
-      return res.status(401).send('Unauthorized');
-    }
-
-    // Handle /emails command
-    if (msg === '/emails') {
-      console.log('Processing /emails command');
-      try {
-        const snapshot = await db.collection('users').get();
-        const emails = snapshot.docs.map(d => d.data().email).filter(Boolean);
-
-        console.log(`Found ${emails.length} emails`);
-        const message = emails.length ? emails.join('\n').slice(0, 4000) : 'No emails found.';
-
-        await axios.post(`${TELEGRAM_API}/sendMessage`, {
-          chat_id: CHAT_ID,
-          text: message,
-        });
-
-        console.log('Email list sent successfully');
-        return res.send('Emails command processed successfully');
-      } catch (error) {
-        console.error('Error processing /emails command:', error.message);
-        await sendErrorMessage(`Error getting emails: ${error.message}`);
-        return res.status(500).send('Internal server error');
+      if (!sender) {
+        console.error('No sender ID found in request');
+        return;
       }
-    }
 
-    // Handle /unsubscribed command
-    if (msg === '/unsubscribed') {
-      console.log('Processing /unsubscribed command');
-      try {
-        const snapshot = await db.collection('users').where('isSubscribed', '==', false).get();
-        const emails = snapshot.docs.map(d => d.data().email).filter(Boolean);
-
-        console.log(`Found ${emails.length} unsubscribed emails`);
-        const message = emails.length ? emails.join('\n').slice(0, 4000) : 'No unsubscribed users.';
-
-        await axios.post(`${TELEGRAM_API}/sendMessage`, {
-          chat_id: CHAT_ID,
-          text: message,
-        });
-
-        console.log('Unsubscribed list sent successfully');
-        return res.send('Unsubscribed command processed successfully');
-      } catch (error) {
-        console.error('Error processing /unsubscribed command:', error.message);
-        await sendErrorMessage(`Error getting unsubscribed users: ${error.message}`);
-        return res.status(500).send('Internal server error');
+      if (String(sender) !== String(CHAT_ID)) {
+        console.warn(`Unauthorized access attempt from ${sender}`);
+        return;
       }
+
+      if (msg === '/emails') {
+        console.log('Processing /emails command');
+        try {
+          const snapshot = await db.collection('users').get();
+          const emails = snapshot.docs.map(d => d.data().email).filter(Boolean);
+          const message = emails.length ? emails.join('\n').slice(0, 4000) : 'No emails found.';
+
+          await axios.post(`${TELEGRAM_API}/sendMessage`, {
+            chat_id: CHAT_ID,
+            text: message,
+          });
+
+          console.log('Email list sent successfully');
+        } catch (error) {
+          console.error('Error processing /emails command:', error.message);
+          await sendErrorMessage(`Error getting emails: ${error.message}`);
+        }
+        return;
+      }
+
+      if (msg === '/unsubscribed') {
+        console.log('Processing /unsubscribed command');
+        try {
+          const snapshot = await db.collection('users').where('isSubscribed', '==', false).get();
+          const emails = snapshot.docs.map(d => d.data().email).filter(Boolean);
+          const message = emails.length ? emails.join('\n').slice(0, 4000) : 'No unsubscribed users.';
+
+          await axios.post(`${TELEGRAM_API}/sendMessage`, {
+            chat_id: CHAT_ID,
+            text: message,
+          });
+
+          console.log('Unsubscribed list sent successfully');
+        } catch (error) {
+          console.error('Error processing /unsubscribed command:', error.message);
+          await sendErrorMessage(`Error getting unsubscribed users: ${error.message}`);
+        }
+        return;
+      }
+
+      console.log('Command not recognized:', msg);
+      await sendErrorMessage(`Command not recognized: ${msg}`);
+
+    } catch (error) {
+      console.error('Error in webhook handler:', error.message);
+      // Do not throw or respond with error status here
     }
-
-    console.log('Command not recognized:', msg);
-    await sendErrorMessage(`Command not recognized: ${msg}`);
-    return res.send('Command not recognized');
-
-  } catch (error) {
-    console.error('Error in webhook handler:', error.message);
-    return res.status(500).send('Internal server error');
-  }
+  })();
 });
 
 // Helper function to send error messages to Telegram
@@ -169,4 +166,6 @@ app.listen(PORT, () => {
   console.log(`Webhook endpoint: https://telegram-bot-server-spvo.onrender.com`);
   console.log(`Health check: https://telegram-bot-server-spvo.onrender.com/health`);
   console.log(`Setup webhook: https://telegram-bot-server-spvo.onrender.com/setup-webhook?url=https://telegram-bot-server-spvo.onrender.com`);
+  console.log('Service account email:', serviceAccount.client_email);
+
 });
