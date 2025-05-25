@@ -115,19 +115,31 @@ app.post('/telegram', (req, res) => {
       }
 
       if (msg === '/expiredtrial') {
-        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    
+      try {
         const snapshot = await db.collection('users')
           .where('isSubscribed', '==', false)
           .where('trialStartDate', '<=', threeDaysAgo)
+          .where('trialStartDate', '>=', fourteenDaysAgo)
           .get();
+    
         const users = snapshot.docs.map(doc => {
           const d = doc.data();
           return `${d.firstName || ''} ${d.lastName || ''} - ${d.email}`;
         });
-        const message = users.length ? `Expired trial:\n${users.join('\n').slice(0, 4000)}` : 'No users with expired trial.';
+    
+        const message = users.length ? `Expired trial (3-14 days ago):\n${users.join('\n').slice(0, 4000)}` : 'No users with expired trial in the last 3-14 days.';
+    
         await sendMessage(message);
-        return;
+      } catch (error) {
+        console.error('Error processing /expiredtrial command:', error);
+        await sendMessage(`Error retrieving expired trials: ${error.message}`);
       }
+      return;
+    }
+
 
       await sendMessage(`Command not recognized: ${msg}. Available: /emails, /unsubscribed, /status, /newusers, /expiredtrial`);
 
