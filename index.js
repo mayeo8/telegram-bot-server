@@ -82,6 +82,37 @@ app.post('/telegram', (req, res) => {
         await sendMessage(message);
         return;
       }
+      if (msg === '/inactive') {
+        console.log('Processing /inactive command');
+        try {
+          if (!db) {
+            throw new Error('Firebase not initialized properly');
+          }
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - 14); // 14 days ago
+      
+          const snapshot = await db.collection('users')
+            .where('lastAffirmationDate', '<=', cutoffDate)
+            .get();
+      
+          const emails = snapshot.docs
+            .map(doc => doc.data().email)
+            .filter(Boolean);
+      
+          const message = emails.length ? emails.join('\n').slice(0, 4000) : 'No inactive users found.';
+      
+          await axios.post(`${TELEGRAM_API}/sendMessage`, {
+            chat_id: CHAT_ID,
+            text: message,
+          });
+      
+          console.log('Inactive users list sent successfully');
+        } catch (error) {
+          console.error('Error processing /inactive command:', error.message);
+          await sendErrorMessage(`Error getting inactive users: ${error.message}`);
+        }
+        return;
+      }
 
       if (msg === '/expiredtrial') {
         const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
